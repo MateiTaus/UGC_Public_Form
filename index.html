@@ -3,84 +3,296 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Form → n8n</title>
+  <title>Formular test → n8n</title>
   <style>
-    :root { --bg:#0b1020; --card:#141a2f; --text:#e7e9ee; --muted:#9aa3b2; --acc:#ff6d5a; }
+    :root { --bg:#0b1020; --card:#141a2f; --text:#e7e9ee; --muted:#9aa3b2; --acc:#ff6d5a; --err:#ea1f30; }
+    *{box-sizing:border-box}
     body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;background:linear-gradient(180deg,#0b1020,#0f1630 40%,#0b1020);color:var(--text);}
-    .wrap{max-width:640px;margin:48px auto;padding:24px;}
-    .card{background:var(--card);border-radius:16px;padding:24px 24px 12px;box-shadow:0 8px 40px rgba(0,0,0,.25)}
-    h1{margin:0 0 16px;font-size:22px}
-    label{display:block;margin:14px 0 6px;color:var(--muted);font-size:14px}
-    input[type="text"], select, input[type="file"]{
+    .wrap{max-width:860px;margin:48px auto;padding:24px}
+    .card{background:var(--card);border-radius:16px;padding:24px;box-shadow:0 8px 40px rgba(0,0,0,.25)}
+    h1{margin:0 0 12px;font-size:24px}
+    p.lead{margin:0 0 16px;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .grid-1{display:grid;grid-template-columns:1fr;gap:12px}
+    label{display:block;margin:10px 0 6px;color:var(--muted);font-size:14px}
+    input[type="text"], input[type="email"], input[type="tel"], input[type="number"], select, input[type="file"], textarea{
       width:100%;padding:12px 14px;border:1px solid #2a3350;background:#0e1428;color:var(--text);
-      border-radius:10px;outline:none
+      border-radius:10px;outline:none;font-size:14px
     }
-    .row{display:grid;grid-template-columns:1fr;gap:12px}
-    .btn{margin-top:16px;width:100%;padding:14px 16px;border:0;border-radius:12px;background:var(--acc);color:white;font-weight:600;cursor:pointer}
+    textarea{min-height:88px;resize:vertical}
     .hint{font-size:12px;color:var(--muted);margin-top:6px}
-    .fields {margin-top:8px;display:grid;gap:10px}
+    .btn{display:inline-block;margin-top:16px;padding:12px 18px;border:0;border-radius:12px;background:var(--acc);color:#fff;font-weight:600;cursor:pointer}
+    .btn.small{padding:8px 12px;border-radius:10px}
+    .btn.gray{background:#2a3350}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .row{display:grid;grid-template-columns:1fr;gap:12px}
+    .scene{border:1px solid #2a3350;border-radius:12px;padding:12px;margin-top:12px;background:#101737}
+    .scene-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .scene-title{font-weight:600}
+    .error{color:var(--err);font-size:13px;margin-top:4px}
+    .rules{background:#0e1428;border:1px dashed #2a3350;border-radius:12px;padding:12px;margin:12px 0;color:#cfd6e6}
+    .footer-note{font-size:12px;color:var(--muted);margin-top:14px}
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>Trimite formularul</h1>
+      <h1>Formular de test — UGC Video</h1>
+      <p class="lead">
+        Completează detaliile de mai jos. Produsul trebuie să rămână **100% vizibil** în cadru, ținut în mână pe tot parcursul clipului, fără acoperirea etichetei.
+      </p>
+      <div class="rules">
+        <ul>
+          <li>Lungimea clipului: 10s / 15s / 25s.</li>
+          <li>Adaugă scene până la maximumul de secunde selectat. Trebuie cel puțin o scenă.</li>
+          <li>Fiecare scenă are: Durată (număr în secunde), Script ScenaX, Cerințe speciale pentru ScenaX.</li>
+        </ul>
+      </div>
 
-      <!-- Schimbă ACTION_URL cu Production URL din n8n Webhook -->
-      <form id="theForm" action="https://n8n.srv892462.hstgr.cloud/webhook/custom-form/submit" method="POST" enctype="multipart/form-data">
-        <div class="row">
+      <!-- Trimite direct în n8n (PRODUCTION URL) -->
+      <form id="theForm"
+            action="https://n8n.srv892462.hstgr.cloud/webhook/custom-form/submit"
+            method="POST"
+            enctype="multipart/form-data"
+            novalidate>
+        <!-- Campuri "din poză" + textul de sus (generale) -->
+        <div class="grid">
           <div>
-            <label>Fotografie (PNG/JPG/WEBP)</label>
-            <input type="file" name="photo" accept=".png,.jpg,.jpeg,.webp,image/*" required />
-            <div class="hint">Fișierul ajunge în n8n ca $binary.photo</div>
+            <label>Nume complet</label>
+            <input type="text" name="full_name" placeholder="Ex: Popescu Andrei" required>
           </div>
-
           <div>
-            <label>Câte câmpuri text vrei?</label>
-            <select name="count" id="count" required>
-              <option value="1" selected>1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
+            <label>Email</label>
+            <input type="email" name="email" placeholder="exemplu@email.ro" required>
+          </div>
+          <div>
+            <label>Telefon</label>
+            <input type="tel" name="phone" placeholder="07xxxxxxxx" required>
+          </div>
+          <div>
+            <label>Denumire proiect / brand</label>
+            <input type="text" name="project_name" placeholder="Ex: Lost In Lust" required>
+          </div>
+          <div>
+            <label>Imagine produs (PNG/JPG/WEBP)</label>
+            <input type="file" name="photo" accept=".png,.jpg,.jpeg,.webp,image/*" required>
+            <div class="hint">Ajunge în n8n ca <code>$binary.photo</code></div>
+          </div>
+          <div>
+            <label>Lungimea videoclipului</label>
+            <select name="video_length" id="video_length" required>
+              <option value="" disabled selected>Alege</option>
+              <option value="10">10 secunde</option>
+              <option value="15">15 secunde</option>
+              <option value="25">25 secunde</option>
             </select>
+            <div class="hint">Butonul „Adaugă scenă” apare cât timp suma duratelor scenelor &lt; lungimea selectată.</div>
           </div>
-
-          <div id="dyn" class="fields"></div>
-
-          <!-- honeypot anti-spam -->
-          <input type="text" name="website" style="position:absolute;left:-9999px" tabindex="-1" autocomplete="off" />
-          <!-- token simplu (verificat în workflow, opțional) -->
-          <input type="hidden" name="form_token" value="TOKENSECRET123" />
         </div>
+
+        <div class="grid-1" style="margin-top:12px">
+          <div>
+            <label>Dialog general (dacă există)</label>
+            <textarea name="dialogue" placeholder="Text narator / replici generale (opțional)"></textarea>
+          </div>
+          <div>
+            <label>Cerințe speciale (generale)</label>
+            <textarea name="special_request" placeholder="Orice cerințe speciale generale (opțional)"></textarea>
+          </div>
+        </div>
+
+        <!-- Scene -->
+        <div class="row" style="margin-top:12px">
+          <div class="scene-head">
+            <div class="scene-title">Scene</div>
+            <div>
+              <button id="addSceneBtn" type="button" class="btn small">+ Adaugă scenă</button>
+            </div>
+          </div>
+          <div id="scenesBox"></div>
+          <div id="sumInfo" class="hint"></div>
+          <div id="sceneError" class="error" style="display:none"></div>
+        </div>
+
+        <!-- Anti-spam + token -->
+        <input type="text" name="website" style="position:absolute;left:-9999px" tabindex="-1" autocomplete="off" />
+        <input type="hidden" name="form_token" value="TOKENSECRET123" />
+
+        <!-- Serializare JSON scene (pentru procesare ușoară în n8n) -->
+        <input type="hidden" id="scenes_json" name="scenes_json" value="[]">
+        <input type="hidden" id="scene_count" name="scene_count" value="0">
+        <input type="hidden" id="scenes_total_seconds" name="scenes_total_seconds" value="0">
+
         <button class="btn" type="submit">Trimite</button>
+        <div class="footer-note">După trimitere, vei vedea mesajul de confirmare din n8n (Respond to Webhook).</div>
       </form>
-      <p class="hint">După submit, n8n răspunde cu mesajul de confirmare.</p>
     </div>
   </div>
 
   <script>
     (function() {
-      const select = document.getElementById('count');
-      const box = document.getElementById('dyn');
+      const videoSelect = document.getElementById('video_length');
+      const addBtn = document.getElementById('addSceneBtn');
+      const box = document.getElementById('scenesBox');
+      const sumInfo = document.getElementById('sumInfo');
+      const sceneError = document.getElementById('sceneError');
+      const form = document.getElementById('theForm');
 
-      function render(n) {
-        box.innerHTML = '';
-        n = Math.max(1, Math.min(3, n|0));
-        for (let i = 1; i <= n; i++) {
-          const w = document.createElement('div');
-          const lab = document.createElement('label');
-          lab.textContent = 'Text ' + i;
-          const inp = document.createElement('input');
-          inp.type = 'text';
-          inp.name = 'text' + i;
-          inp.required = true;
-          w.appendChild(lab);
-          w.appendChild(inp);
-          box.appendChild(w);
-        }
+      const hiddenJSON = document.getElementById('scenes_json');
+      const hiddenCount = document.getElementById('scene_count');
+      const hiddenTotal = document.getElementById('scenes_total_seconds');
+
+      let sceneIndex = 0;
+
+      function getMaxSeconds() {
+        const v = parseInt(videoSelect.value || '0', 10);
+        return isNaN(v) ? 0 : v;
       }
 
-      render(parseInt(select.value,10));
-      select.addEventListener('change', e => render(parseInt(e.target.value,10)));
+      function currentScenes() {
+        const nodes = box.querySelectorAll('.scene');
+        const list = [];
+        nodes.forEach((sc) => {
+          const dur = parseInt(sc.querySelector('input[name^="scene_duration_"]').value || '0', 10) || 0;
+          const scr = sc.querySelector('textarea[name^="scene_script_"]').value || '';
+          const req = sc.querySelector('textarea[name^="scene_req_"]').value || '';
+          list.push({ duration: dur, script: scr, requirements: req });
+        });
+        return list;
+      }
+
+      function sumSeconds(list) {
+        return list.reduce((acc, s) => acc + (parseInt(s.duration || 0, 10) || 0), 0);
+      }
+
+      function renderSum() {
+        const max = getMaxSeconds();
+        const list = currentScenes();
+        const total = sumSeconds(list);
+        sumInfo.textContent = max ? `Total scene: ${total}s / ${max}s` : 'Alege mai întâi lungimea videoclipului.';
+        addBtn.disabled = !max || total >= max;
+        hiddenJSON.value = JSON.stringify(list);
+        hiddenCount.value = String(list.length);
+        hiddenTotal.value = String(total);
+      }
+
+      function addScene() {
+        const max = getMaxSeconds();
+        if (!max) { alert('Selectează mai întâi lungimea videoclipului.'); return; }
+
+        // Nu adăugăm dacă deja am atins limita
+        const total = sumSeconds(currentScenes());
+        if (total >= max) return;
+
+        sceneIndex += 1;
+        const i = sceneIndex;
+
+        const wrap = document.createElement('div');
+        wrap.className = 'scene';
+        wrap.innerHTML = `
+          <div class="scene-head">
+            <div class="scene-title">Scena ${i}</div>
+            <div>
+              <button type="button" class="btn small gray" data-remove="1">Șterge</button>
+            </div>
+          </div>
+          <div class="grid">
+            <div>
+              <label>Durata scenă (secunde)</label>
+              <input type="number" min="1" step="1" name="scene_duration_${i}" placeholder="Ex: 3" required>
+            </div>
+            <div>
+              <label>Script Scena${i}</label>
+              <textarea name="scene_script_${i}" placeholder="Textul scenei ${i}" required></textarea>
+            </div>
+          </div>
+          <div class="grid-1">
+            <div>
+              <label>Cerințe speciale pentru Scena${i}</label>
+              <textarea name="scene_req_${i}" placeholder="Cerințe speciale pentru scena ${i} (opțional)"></textarea>
+            </div>
+          </div>
+        `;
+        box.appendChild(wrap);
+
+        // Listeners pe câmpurile scenei
+        const durInput = wrap.querySelector(`input[name="scene_duration_${i}"]`);
+        const scrInput = wrap.querySelector(`textarea[name="scene_script_${i}"]`);
+        const delBtn = wrap.querySelector('button[data-remove="1"]');
+
+        const onAnyChange = () => {
+          const maxS = getMaxSeconds();
+          const list = currentScenes();
+          const totalS = sumSeconds(list);
+
+          // dacă totalul depășește, corectăm durata actuală
+          if (totalS > maxS) {
+            const over = totalS - maxS;
+            const cur = parseInt(durInput.value || '0', 10) || 0;
+            const adjusted = Math.max(0, cur - over);
+            durInput.value = adjusted > 0 ? adjusted : '';
+          }
+          renderSum();
+        };
+
+        durInput.addEventListener('input', onAnyChange);
+        scrInput.addEventListener('input', onAnyChange);
+        delBtn.addEventListener('click', () => { wrap.remove(); renderSum(); });
+
+        renderSum();
+      }
+
+      addBtn.addEventListener('click', addScene);
+      videoSelect.addEventListener('change', () => { renderSum(); });
+
+      form.addEventListener('submit', (e) => {
+        sceneError.style.display = 'none';
+        const max = getMaxSeconds();
+        const list = currentScenes();
+        const total = sumSeconds(list);
+
+        if (!max) {
+          e.preventDefault();
+          sceneError.textContent = 'Selectează lungimea videoclipului.';
+          sceneError.style.display = 'block';
+          return;
+        }
+        if (list.length === 0) {
+          e.preventDefault();
+          sceneError.textContent = 'Adaugă cel puțin o scenă înainte de a trimite formularul.';
+          sceneError.style.display = 'block';
+          return;
+        }
+        // verifică câmpurile scenei
+        for (let idx = 0; idx < list.length; idx++) {
+          const s = list[idx];
+          if (!s.duration || s.duration <= 0) {
+            e.preventDefault();
+            sceneError.textContent = `Durata trebuie să fie un număr > 0 la Scena ${idx+1}.`;
+            sceneError.style.display = 'block';
+            return;
+          }
+          if (!s.script.trim()) {
+            e.preventDefault();
+            sceneError.textContent = `Completează Script la Scena ${idx+1}.`;
+            sceneError.style.display = 'block';
+            return;
+          }
+        }
+        if (total > max) {
+          e.preventDefault();
+          sceneError.textContent = 'Suma duratelor scenelor depășește lungimea selectată.';
+          sceneError.style.display = 'block';
+          return;
+        }
+        // serializare finală
+        hiddenJSON.value = JSON.stringify(list);
+        hiddenCount.value = String(list.length);
+        hiddenTotal.value = String(total);
+      });
+
+      // Pornire
+      renderSum();
     })();
   </script>
 </body>

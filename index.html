@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Form → n8n</title>
+  <style>
+    :root { --bg:#0b1020; --card:#141a2f; --text:#e7e9ee; --muted:#9aa3b2; --acc:#ff6d5a; }
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;background:linear-gradient(180deg,#0b1020,#0f1630 40%,#0b1020);color:var(--text);}
+    .wrap{max-width:640px;margin:48px auto;padding:24px;}
+    .card{background:var(--card);border-radius:16px;padding:24px 24px 12px;box-shadow:0 8px 40px rgba(0,0,0,.25)}
+    h1{margin:0 0 16px;font-size:22px}
+    label{display:block;margin:14px 0 6px;color:var(--muted);font-size:14px}
+    input[type="text"], select, input[type="file"]{
+      width:100%;padding:12px 14px;border:1px solid #2a3350;background:#0e1428;color:var(--text);
+      border-radius:10px;outline:none
+    }
+    .row{display:grid;grid-template-columns:1fr;gap:12px}
+    .btn{margin-top:16px;width:100%;padding:14px 16px;border:0;border-radius:12px;background:var(--acc);color:white;font-weight:600;cursor:pointer}
+    .hint{font-size:12px;color:var(--muted);margin-top:6px}
+    .fields {margin-top:8px;display:grid;gap:10px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Trimite formularul</h1>
+
+      <!-- Schimbă ACTION_URL cu Production URL din n8n Webhook -->
+      <form id="theForm" action="https://n8n.srv892462.hstgr.cloud/webhook/custom-form/submit" method="POST" enctype="multipart/form-data">
+        <div class="row">
+          <div>
+            <label>Fotografie (PNG/JPG/WEBP)</label>
+            <input type="file" name="photo" accept=".png,.jpg,.jpeg,.webp,image/*" required />
+            <div class="hint">Fișierul ajunge în n8n ca $binary.photo</div>
+          </div>
+
+          <div>
+            <label>Câte câmpuri text vrei?</label>
+            <select name="count" id="count" required>
+              <option value="1" selected>1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+            </select>
+          </div>
+
+          <div id="dyn" class="fields"></div>
+
+          <!-- honeypot anti-spam -->
+          <input type="text" name="website" style="position:absolute;left:-9999px" tabindex="-1" autocomplete="off" />
+          <!-- token simplu (verificat în workflow, opțional) -->
+          <input type="hidden" name="form_token" value="TOKENSECRET123" />
+        </div>
+        <button class="btn" type="submit">Trimite</button>
+      </form>
+      <p class="hint">După submit, n8n răspunde cu mesajul de confirmare.</p>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const select = document.getElementById('count');
+      const box = document.getElementById('dyn');
+
+      function render(n) {
+        box.innerHTML = '';
+        n = Math.max(1, Math.min(3, n|0));
+        for (let i = 1; i <= n; i++) {
+          const w = document.createElement('div');
+          const lab = document.createElement('label');
+          lab.textContent = 'Text ' + i;
+          const inp = document.createElement('input');
+          inp.type = 'text';
+          inp.name = 'text' + i;
+          inp.required = true;
+          w.appendChild(lab);
+          w.appendChild(inp);
+          box.appendChild(w);
+        }
+      }
+
+      render(parseInt(select.value,10));
+      select.addEventListener('change', e => render(parseInt(e.target.value,10)));
+    })();
+  </script>
+</body>
+</html>

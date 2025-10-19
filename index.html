@@ -15,6 +15,7 @@
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
     .grid-1{display:grid;grid-template-columns:1fr;gap:12px}
     label{display:block;margin:10px 0 6px;color:var(--muted);font-size:14px}
+    .req{color:#ff6d5a;margin-left:4px}
     input[type="text"], input[type="email"], input[type="tel"], input[type="number"], select, input[type="file"], textarea{
       width:100%;padding:12px 14px;border:1px solid #2a3350;background:#0e1428;color:var(--text);
       border-radius:10px;outline:none;font-size:14px
@@ -32,6 +33,7 @@
     .error{color:var(--err);font-size:13px;margin-top:4px}
     .rules{background:#0e1428;border:1px dashed #2a3350;border-radius:12px;padding:12px;margin:12px 0;color:#cfd6e6}
     .footer-note{font-size:12px;color:var(--muted);margin-top:14px}
+    #addSceneWrap{text-align:right;margin-top:8px}
   </style>
 </head>
 <body>
@@ -39,13 +41,13 @@
     <div class="card">
       <h1>Formular de test — UGC Video</h1>
       <p class="lead">
-        Completează detaliile de mai jos. Produsul trebuie să rămână **100% vizibil** în cadru, ținut în mână pe tot parcursul clipului, fără acoperirea etichetei.
+        Produsul trebuie să rămână <strong>100% vizibil</strong> în cadru, ținut în mână pe tot parcursul clipului, fără acoperirea etichetei.
       </p>
       <div class="rules">
         <ul>
           <li>Lungimea clipului: 10s / 15s / 25s.</li>
-          <li>Adaugă scene până la maximumul de secunde selectat. Trebuie cel puțin o scenă.</li>
-          <li>Fiecare scenă are: Durată (număr în secunde), Script ScenaX, Cerințe speciale pentru ScenaX.</li>
+          <li>Adaugă scene până la maximumul de secunde selectat. Trebuie cel puțin o scenă (Scena 1 nu se poate șterge).</li>
+          <li>Limită totală de caractere pentru <em>scripturile scenelor</em> (inclusiv spații/semne): 10s→150, 15s→225, 25s→375.</li>
         </ul>
       </div>
 
@@ -55,42 +57,40 @@
             method="POST"
             enctype="multipart/form-data"
             novalidate>
-        <!-- Campuri "din poză" + textul de sus (generale) -->
+        <!-- Generale -->
         <div class="grid">
           <div>
-            <label>Cod Client</label>
-            <input type="text" name="Cod Client" placeholder="Ex: T29999" required>
+            <label>Cod Client <span class="req">*</span></label>
+            <input type="text" name="client_code" placeholder="Ex: T29999" required>
           </div>
           <div>
             <label>Denumire proiect / brand</label>
-            <input type="text" name="project_name" placeholder="Ex: Lost In Lust" required>
+            <input type="text" name="project_name" placeholder="Ex: AD1 - Test">
           </div>
           <div>
-            <label>Imagine produs (PNG/JPG/WEBP)</label>
+            <label>Imagine produs (PNG/JPG/WEBP) <span class="req">*</span></label>
             <input type="file" name="photo" accept=".png,.jpg,.jpeg,.webp,image/*" required>
             <div class="hint">Ajunge în n8n ca <code>$binary.photo</code></div>
           </div>
           <div>
-            <label>Lungimea videoclipului</label>
+            <label>Lungimea videoclipului <span class="req">*</span></label>
             <select name="video_length" id="video_length" required>
               <option value="" disabled selected>Alege</option>
               <option value="10">10 secunde</option>
               <option value="15">15 secunde</option>
               <option value="25">25 secunde</option>
             </select>
-            <div class="hint">Butonul „Adaugă scenă” apare cât timp suma duratelor scenelor &lt; lungimea selectată.</div>
+            <div class="hint">„Adaugă scenă” apare cât timp total secunde &lt; lungimea selectată.</div>
           </div>
         </div>
 
         <!-- Scene -->
         <div class="row" style="margin-top:12px">
-          <div class="scene-head">
-            <div class="scene-title">Scene</div>
-            <div>
-              <button id="addSceneBtn" type="button" class="btn small">+ Adaugă scenă</button>
-            </div>
-          </div>
+          <div class="scene-title">Scene</div>
           <div id="scenesBox"></div>
+          <div id="addSceneWrap">
+            <button id="addSceneBtn" type="button" class="btn small">+ Adaugă scenă</button>
+          </div>
           <div id="sumInfo" class="hint"></div>
           <div id="sceneError" class="error" style="display:none"></div>
         </div>
@@ -99,10 +99,11 @@
         <input type="text" name="website" style="position:absolute;left:-9999px" tabindex="-1" autocomplete="off" />
         <input type="hidden" name="form_token" value="TOKENSECRET123" />
 
-        <!-- Serializare JSON scene (pentru procesare ușoară în n8n) -->
+        <!-- Serializare JSON scene -->
         <input type="hidden" id="scenes_json" name="scenes_json" value="[]">
         <input type="hidden" id="scene_count" name="scene_count" value="0">
         <input type="hidden" id="scenes_total_seconds" name="scenes_total_seconds" value="0">
+        <input type="hidden" id="scenes_total_chars" name="scenes_total_chars" value="0">
 
         <button class="btn" type="submit">Trimite</button>
         <div class="footer-note">După trimitere, vei vedea mesajul de confirmare din n8n (Respond to Webhook).</div>
@@ -114,6 +115,7 @@
     (function() {
       const videoSelect = document.getElementById('video_length');
       const addBtn = document.getElementById('addSceneBtn');
+      const addWrap = document.getElementById('addSceneWrap');
       const box = document.getElementById('scenesBox');
       const sumInfo = document.getElementById('sumInfo');
       const sceneError = document.getElementById('sceneError');
@@ -122,158 +124,252 @@
       const hiddenJSON = document.getElementById('scenes_json');
       const hiddenCount = document.getElementById('scene_count');
       const hiddenTotal = document.getElementById('scenes_total_seconds');
-
-      let sceneIndex = 0;
+      const hiddenChars = document.getElementById('scenes_total_chars');
 
       function getMaxSeconds() {
         const v = parseInt(videoSelect.value || '0', 10);
         return isNaN(v) ? 0 : v;
       }
-
-      function currentScenes() {
-        const nodes = box.querySelectorAll('.scene');
-        const list = [];
-        nodes.forEach((sc) => {
-          const dur = parseInt(sc.querySelector('input[name^="scene_duration_"]').value || '0', 10) || 0;
-          const scr = sc.querySelector('textarea[name^="scene_script_"]').value || '';
-          const req = sc.querySelector('textarea[name^="scene_req_"]').value || '';
-          list.push({ duration: dur, script: scr, requirements: req });
-        });
-        return list;
+      function getMaxChars() {
+        const len = getMaxSeconds();
+        if (len === 10) return 150;
+        if (len === 15) return 225;
+        if (len === 25) return 375;
+        return 0;
       }
 
+      function allSceneNodes() {
+        return Array.from(box.querySelectorAll('.scene'));
+      }
+      function currentScenes() {
+        return allSceneNodes().map(sc => {
+          const dur = parseInt(sc.querySelector('input[name^="scene_duration_"]').value || '0', 10) || 0;
+          const scr = (sc.querySelector('textarea[name^="scene_script_"]').value || '');
+          const req = (sc.querySelector('textarea[name^="scene_req_"]').value || '');
+          return { duration: dur, script: scr, requirements: req };
+        });
+      }
       function sumSeconds(list) {
         return list.reduce((acc, s) => acc + (parseInt(s.duration || 0, 10) || 0), 0);
       }
-
-      function renderSum() {
-        const max = getMaxSeconds();
-        const list = currentScenes();
-        const total = sumSeconds(list);
-        sumInfo.textContent = max ? `Total scene: ${total}s / ${max}s` : 'Alege mai întâi lungimea videoclipului.';
-        addBtn.disabled = !max || total >= max;
-        hiddenJSON.value = JSON.stringify(list);
-        hiddenCount.value = String(list.length);
-        hiddenTotal.value = String(total);
+      function sumChars(list) {
+        // doar caracterele din "script", cu spații și semne
+        return list.reduce((acc, s) => acc + (s.script || '').length, 0);
       }
 
-      function addScene() {
-        const max = getMaxSeconds();
-        if (!max) { alert('Selectează mai întâi lungimea videoclipului.'); return; }
+      function updateHidden(list) {
+        const totalS = sumSeconds(list);
+        const totalC = sumChars(list);
+        hiddenJSON.value = JSON.stringify(list);
+        hiddenCount.value = String(list.length);
+        hiddenTotal.value = String(totalS);
+        hiddenChars.value = String(totalC);
+      }
 
-        // Nu adăugăm dacă deja am atins limita
-        const total = sumSeconds(currentScenes());
-        if (total >= max) return;
+      function updateAddBtnVisibility(list) {
+        const maxS = getMaxSeconds();
+        const totalS = sumSeconds(list);
+        // butonul vizibil doar dacă avem lungime selectată și încă nu s-a atins limita
+        const canAdd = !!maxS && totalS < maxS;
+        addWrap.style.display = canAdd ? 'block' : 'none';
+        addBtn.disabled = !canAdd;
+      }
 
-        sceneIndex += 1;
-        const i = sceneIndex;
+      function renderSummary(list) {
+        const maxS = getMaxSeconds();
+        const totalS = sumSeconds(list);
+        const maxC = getMaxChars();
+        const totalC = sumChars(list);
+        const secPart = maxS ? `Total secunde: ${totalS}s / ${maxS}s` : 'Alege mai întâi lungimea videoclipului.';
+        const charPart = maxC ? ` · Caractere script: ${totalC} / ${maxC}` : '';
+        sumInfo.textContent = secPart + charPart;
+      }
 
-        const wrap = document.createElement('div');
-        wrap.className = 'scene';
-        wrap.innerHTML = `
+      function renumberScenes() {
+        // Reface indexul, label-urile și numele câmpurilor astfel încât numerotarea să fie continuă
+        const nodes = allSceneNodes();
+        nodes.forEach((sc, idx) => {
+          const n = idx + 1;
+          sc.querySelector('.scene-title').textContent = `Scena ${n}`;
+
+          const dur = sc.querySelector('input[name^="scene_duration_"]');
+          const scr = sc.querySelector('textarea[name^="scene_script_"]');
+          const req = sc.querySelector('textarea[name^="scene_req_"]');
+
+          dur.setAttribute('name', `scene_duration_${n}`);
+          scr.setAttribute('name', `scene_script_${n}`);
+          req.setAttribute('name', `scene_req_${n}`);
+
+          // Prima scenă nu se poate șterge
+          const delBtn = sc.querySelector('button[data-remove="1"]');
+          if (n === 1) {
+            delBtn.style.display = 'none';
+          } else {
+            delBtn.style.display = 'inline-block';
+          }
+        });
+      }
+
+      function attachSceneListeners(sc) {
+        const durInput = sc.querySelector('input[name^="scene_duration_"]');
+        const scrInput = sc.querySelector('textarea[name^="scene_script_"]');
+        const reqInput = sc.querySelector('textarea[name^="scene_req_"]');
+        const delBtn = sc.querySelector('button[data-remove="1"]');
+
+        function onChange() {
+          const list = currentScenes();
+          const maxS = getMaxSeconds();
+          // dacă depășim secunde, corectăm scena curentă
+          const total = sumSeconds(list);
+          if (maxS && total > maxS) {
+            const over = total - maxS;
+            const cur = parseInt(durInput.value || '0', 10) || 0;
+            const adjusted = Math.max(0, cur - over);
+            durInput.value = adjusted > 0 ? adjusted : '';
+          }
+          // Recalculează rezumatul și butonul
+          const list2 = currentScenes();
+          updateHidden(list2);
+          renderSummary(list2);
+          updateAddBtnVisibility(list2);
+        }
+
+        durInput.addEventListener('input', onChange);
+        scrInput.addEventListener('input', onChange);
+        reqInput.addEventListener('input', onChange);
+
+        delBtn.addEventListener('click', () => {
+          sc.remove();
+          renumberScenes();
+          const list = currentScenes();
+          updateHidden(list);
+          renderSummary(list);
+          updateAddBtnVisibility(list);
+        });
+      }
+
+      function createSceneElement(n) {
+        const sc = document.createElement('div');
+        sc.className = 'scene';
+        sc.innerHTML = `
           <div class="scene-head">
-            <div class="scene-title">Scena ${i}</div>
+            <div class="scene-title">Scena ${n}</div>
             <div>
               <button type="button" class="btn small gray" data-remove="1">Șterge</button>
             </div>
           </div>
           <div class="grid">
             <div>
-              <label>Durata scenă (secunde)</label>
-              <input type="number" min="1" step="1" name="scene_duration_${i}" placeholder="Ex: 3" required>
+              <label>Durata scenă (secunde) <span class="req">*</span></label>
+              <input type="number" min="1" step="1" name="scene_duration_${n}" placeholder="Ex: 3" required>
             </div>
             <div>
-              <label>Script Scena${i}</label>
-              <textarea name="scene_script_${i}" placeholder="Textul scenei ${i}" required></textarea>
+              <label>Script Scena${n} <span class="req">*</span></label>
+              <textarea name="scene_script_${n}" placeholder="Textul scenei ${n}" required></textarea>
             </div>
           </div>
           <div class="grid-1">
             <div>
-              <label>Cerințe speciale pentru Scena${i}</label>
-              <textarea name="scene_req_${i}" placeholder="Cerințe speciale pentru scena ${i} (opțional)"></textarea>
+              <label>Cerințe speciale pentru Scena${n} <span class="req">*</span></label>
+              <textarea name="scene_req_${n}" placeholder="Cerințe speciale pentru scena ${n}" required></textarea>
             </div>
           </div>
         `;
-        box.appendChild(wrap);
-
-        // Listeners pe câmpurile scenei
-        const durInput = wrap.querySelector(`input[name="scene_duration_${i}"]`);
-        const scrInput = wrap.querySelector(`textarea[name="scene_script_${i}"]`);
-        const delBtn = wrap.querySelector('button[data-remove="1"]');
-
-        const onAnyChange = () => {
-          const maxS = getMaxSeconds();
-          const list = currentScenes();
-          const totalS = sumSeconds(list);
-
-          // dacă totalul depășește, corectăm durata actuală
-          if (totalS > maxS) {
-            const over = totalS - maxS;
-            const cur = parseInt(durInput.value || '0', 10) || 0;
-            const adjusted = Math.max(0, cur - over);
-            durInput.value = adjusted > 0 ? adjusted : '';
-          }
-          renderSum();
-        };
-
-        durInput.addEventListener('input', onAnyChange);
-        scrInput.addEventListener('input', onAnyChange);
-        delBtn.addEventListener('click', () => { wrap.remove(); renderSum(); });
-
-        renderSum();
+        return sc;
       }
 
+      function addScene() {
+        const nodes = allSceneNodes();
+        const nextIndex = nodes.length + 1; // numerotare continuă
+        const wrap = createSceneElement(nextIndex);
+        box.appendChild(wrap);
+        attachSceneListeners(wrap);
+        renumberScenes(); // asigură că prima scenă nu poate fi ștearsă
+        const list = currentScenes();
+        updateHidden(list);
+        renderSummary(list);
+        updateAddBtnVisibility(list);
+        // mută butonul sub ultima scenă (e deja în addWrap, care stă după box)
+      }
+
+      // creare Scena 1 la încărcare (mereu vizibilă, nu se poate șterge)
+      addScene();
+
       addBtn.addEventListener('click', addScene);
-      videoSelect.addEventListener('change', () => { renderSum(); });
+      videoSelect.addEventListener('change', () => {
+        const list = currentScenes();
+        updateHidden(list);
+        renderSummary(list);
+        updateAddBtnVisibility(list);
+      });
 
       form.addEventListener('submit', (e) => {
         sceneError.style.display = 'none';
-        const max = getMaxSeconds();
-        const list = currentScenes();
-        const total = sumSeconds(list);
 
-        if (!max) {
+        // Validări suplimentare: scenă minimă, câmpuri scene, limite secunde + caractere
+        const maxS = getMaxSeconds();
+        if (!maxS) {
           e.preventDefault();
           sceneError.textContent = 'Selectează lungimea videoclipului.';
           sceneError.style.display = 'block';
           return;
         }
+
+        const list = currentScenes();
         if (list.length === 0) {
           e.preventDefault();
-          sceneError.textContent = 'Adaugă cel puțin o scenă înainte de a trimite formularul.';
+          sceneError.textContent = 'Adaugă cel puțin o scenă.';
           sceneError.style.display = 'block';
           return;
         }
-        // verifică câmpurile scenei
-        for (let idx = 0; idx < list.length; idx++) {
-          const s = list[idx];
+        // toate câmpurile scenelor obligatorii
+        for (let i = 0; i < list.length; i++) {
+          const s = list[i];
           if (!s.duration || s.duration <= 0) {
             e.preventDefault();
-            sceneError.textContent = `Durata trebuie să fie un număr > 0 la Scena ${idx+1}.`;
+            sceneError.textContent = `Durata trebuie să fie un număr > 0 la Scena ${i+1}.`;
             sceneError.style.display = 'block';
             return;
           }
           if (!s.script.trim()) {
             e.preventDefault();
-            sceneError.textContent = `Completează Script la Scena ${idx+1}.`;
+            sceneError.textContent = `Completează Script la Scena ${i+1}.`;
+            sceneError.style.display = 'block';
+            return;
+          }
+          if (!s.requirements.trim()) {
+            e.preventDefault();
+            sceneError.textContent = `Completează Cerințe speciale la Scena ${i+1}.`;
             sceneError.style.display = 'block';
             return;
           }
         }
-        if (total > max) {
+
+        const totalS = sumSeconds(list);
+        if (totalS > maxS) {
           e.preventDefault();
           sceneError.textContent = 'Suma duratelor scenelor depășește lungimea selectată.';
           sceneError.style.display = 'block';
           return;
         }
-        // serializare finală
-        hiddenJSON.value = JSON.stringify(list);
-        hiddenCount.value = String(list.length);
-        hiddenTotal.value = String(total);
+
+        const maxC = getMaxChars();
+        const totalC = sumChars(list);
+        if (maxC && totalC > maxC) {
+          e.preventDefault();
+          sceneError.textContent = `Ai depășit limita de caractere pentru scripturi (${totalC}/${maxC}). Redu textul.`;
+          sceneError.style.display = 'block';
+          return;
+        }
+
+        // serialize finale (deja setate în hidden), HTML5 va verifica și restul „required”
+        updateHidden(list);
       });
 
-      // Pornire
-      renderSum();
+      // Inițializare sumar și buton
+      updateHidden(currentScenes());
+      renderSummary(currentScenes());
+      updateAddBtnVisibility(currentScenes());
     })();
   </script>
 </body>
